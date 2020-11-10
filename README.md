@@ -22,7 +22,11 @@ Encoding Success!
 ```
 
 ## SM4
-reference: http://gmssl.org/docs/sm4.html
+reference: 
+- http://gmssl.org/docs/sm4.html
+- https://a-little-cat.github.io/2017/12/14/SM4.html
+- https://drive.google.com/file/d/0B0o25hRlUdXcbzdjT0hrYkkwUjg/view
+validate: https://pypi.org/project/gmssl/
 
 ## SM3 
 reference: http://gmssl.org/docs/sm3.html
