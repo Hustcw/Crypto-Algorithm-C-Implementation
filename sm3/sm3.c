@@ -275,7 +275,7 @@ void SM3_File(SM3_Context* ctx, char* filename, uint8_t* output)
         gettimeofday(&end, NULL);
         double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
         timeuse = timeuse / (double)1e6;
-        printf("Hash speed: %.2f Mps\n", (double)(16*8)/timeuse);
+        printf("Hash speed: %.2f Mps\n", (double)(16*8/1024.0)/timeuse);
     #endif
 }
 

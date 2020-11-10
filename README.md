@@ -47,7 +47,26 @@ Decryption succeeded!
 Encryption Success!
 ```
 ## SM3 
-reference: http://gmssl.org/docs/sm3.html
+reference: 
+- http://gmssl.org/docs/sm3.html
+- https://gitee.com/snowlandltd/snowland-smx-python
+- SM3密码杂凑算法
 
+- Usage:
+```bash
+python3 utils.py --mode generate
+clang sm3.c -O3 -o sm3 && ./sm3
+python3 utils.py --mode validate
+```
+- Output
+```bash
+(crypto) ➜  sm3 git:(main) ✗ python utils.py --mode generate
+(crypto) ➜  sm3 git:(main) ✗ clang sm3.c -O3 -o sm3 && ./sm3 
+Hash speed: 838.93 Mps # can be faster when data is larger
+SM3: 7dbc2fd6 258d9dc1 4a3b314e 0fc363c7 eda3da7e 32e51d43 1b48c15a 5fd044a8 %                                                                                  
+(crypto) ➜  sm3 git:(main) ✗ python utils.py --mode validate 
+SM3 Hash Success!
+(crypto) ➜  sm3 git:(main) ✗
+```
 ## SHA-3
 reference: https://github.com/brainhub/SHA3IUF/blob/master/sha3.c
