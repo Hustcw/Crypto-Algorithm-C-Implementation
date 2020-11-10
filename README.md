@@ -5,9 +5,9 @@ reference: https://github.com/kokke/tiny-AES-c/blob/master/aes.c
 
 - Usage:
 ```bash
-python utils.py --mode generate # generate input date for testing
+python utils.py --mode generate # generate input data for testing
 clang aes.c -O3 -o aes  && ./aes # compile
-python utils.py --mode validate --key [key_in_hex] --iv [iv_in_hex]
+python utils.py --mode validate --key [key_in_hex] --iv [iv_in_hex] # validate the correctness of implementation
 ```
 - Output like this:
 ```bash
