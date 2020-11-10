@@ -15,7 +15,7 @@ python utils.py --mode validate --key [key_in_hex] --iv [iv_in_hex] # validate t
 (crypto) ➜  aes git:(main) ✗ ./aes
 key: 2b7e151628aed2a6abf7158809cf4f3c
  iv: 471f48486393fd769d85d7015c07856c
-Encryption speed: 354.11 Mps
+Encryption speed: 354.11 Mbps
 Decryption succeeded!
 (crypto) ➜  aes git:(main) ✗ python utils.py --mode validate --key 2b7e151628aed2a6abf7158809cf4f3c --iv 471f48486393fd769d85d7015c07856c
 Encoding Success!
@@ -41,7 +41,7 @@ python3 utils.py --mode validate --key [key_in_hex] --iv [iv_in_hex]
 ➜  sm4 git:(main) ✗ ./sm4
 key: 2b7e151628aed2a6abf7158809cf4f3c
  iv: d370143ed71bbc2f811d0f3b3e4da16a
-Encryption speed: 482.63 Mps
+Encryption speed: 482.63 Mbps
 Decryption succeeded!
 ➜  sm4 git:(main) ✗ python3 utils.py --mode validate --key 2b7e151628aed2a6abf7158809cf4f3c --iv d370143ed71bbc2f811d0f3b3e4da16a
 Encryption Success!
@@ -62,7 +62,7 @@ python3 utils.py --mode validate
 ```bash
 (crypto) ➜  sm3 git:(main) ✗ python utils.py --mode generate
 (crypto) ➜  sm3 git:(main) ✗ clang sm3.c -O3 -o sm3 && ./sm3 
-Hash speed: 838.93 Mps # can be faster when data is larger
+Hash speed: 838.93 Mbps # can be faster when data is larger
 SM3: 7dbc2fd6 258d9dc1 4a3b314e 0fc363c7 eda3da7e 32e51d43 1b48c15a 5fd044a8 %                                                                                  
 (crypto) ➜  sm3 git:(main) ✗ python utils.py --mode validate 
 SM3 Hash Success!
