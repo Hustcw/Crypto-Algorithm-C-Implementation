@@ -24,10 +24,16 @@ def getSbox():
             print('')
     return do_getSbox()
 
+def generate():
+    fp = open('input.txt', 'w')
+    message = 'this_is_a_test!!'
+    assert len(message) == 16
+    NUM = 1024
+    fp.write(message*NUM)
+    fp.close()
+
 import argparse
-
 parser = argparse.ArgumentParser(description='Process Operation')
-
 parser.add_argument("--mode", help="work mode", type=str)
 parser.add_argument("--key", help="aes key", type=str)
 parser.add_argument("--iv", help="cbc mode iv", type=str)

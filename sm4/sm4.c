@@ -1,13 +1,29 @@
 #include<string.h>
 #include<stdio.h>
 #include <stdlib.h>
-// #include <time.h>
+#include <time.h>
 #include <sys/time.h>
 
 #include "sm4.h"
 // define SM4 function below
 #define Nr 32
 #define Nk 4
+// #define DEBUG
+#define get_uint32_be(n,b)                   \
+{                                            \
+    (n) = ( (uint32_t) (b)[0] << 24 )        \
+        | ( (uint32_t) (b)[1] << 16 )        \
+        | ( (uint32_t) (b)[2] << 8  )        \
+        | ( (uint32_t) (b)[3]   );           \
+}
+
+#define put_uint32_be(n,b)                  \
+{                                           \
+    (b)[0] = (uint8_t) ( (n) >> 24 );       \
+    (b)[1] = (uint8_t) ( (n) >> 16 );       \
+    (b)[2] = (uint8_t) ( (n) >>  8 );       \
+    (b)[3] = (uint8_t) ( (n)       );       \
+}
 
 static const uint8_t Sbox[256] = {
 0xd6, 0x90, 0xe9, 0xfe, 0xcc, 0xe1, 0x3d, 0xb7, 0x16, 0xb6, 0x14, 0xc2, 0x28, 0xfb, 0x2c, 0x05, 
@@ -44,6 +60,17 @@ static const uint32_t CK[32] =
     0x10171e25,0x2c333a41,0x484f565d,0x646b7279
 };
 
+
+void show_rk(uint8_t* buf, char* name)
+{
+  printf("%3s: ", name);
+  for(int i=0; i<4; i++)
+  {
+    printf("%02x", buf[3-i]);
+  }
+  printf("\n");
+}
+
 uint32_t circular_left(uint32_t t, int n)
 {
     return (t << n) | (t >> (32-n));
@@ -51,26 +78,38 @@ uint32_t circular_left(uint32_t t, int n)
 
 uint32_t ExpT(uint32_t t)
 {
-    return t ^ circular_left(t, 13) ^ circular_left(t, 23);
-}
-
-uint32_t T(uint32_t t)
-{
-    uint8_t *A;
-    uint8_t B[4];
-    uint32_t _B, C;
-    A = (uint8_t *)(&t);
+    uint8_t A[4], B[4];
+    uint32_t r;
+    put_uint32_be(t, A);
     for(int i = 0; i < 4; i++)
     {
         B[i] = Sbox[A[i]];
     }
-    _B = *((uint32_t *)B);
+    get_uint32_be(r, B);
+    return r ^ circular_left(r, 13) ^ circular_left(r, 23);
+}
+
+uint32_t T(uint32_t t)
+{
+    uint8_t A[4], B[4];
+    uint32_t _B;
+    put_uint32_be(t, A);
+    for(int i = 0; i < 4; i++)
+    {
+        B[i] = Sbox[A[i]];
+    }
+    get_uint32_be(_B, B);
     return _B ^ circular_left(_B, 2) ^ circular_left(_B, 10) ^ circular_left(_B, 18) ^ circular_left(_B, 24);
 }
 
-void KeyExpansion(uint32_t* RoundKey, uint32_t* key)
+void KeyExpansion(uint32_t* RoundKey, uint8_t* KEY)
 {
-    uint32_t K[35];
+    uint32_t key[4];
+    for(int i = 0; i < 4; i++)
+    {
+        get_uint32_be(key[i], KEY+4*i)
+    }
+    uint32_t K[36];
     for(int i = 0; i < 4; i++)
     {
         K[i] = key[i] ^ FK[i];
@@ -79,13 +118,8 @@ void KeyExpansion(uint32_t* RoundKey, uint32_t* key)
     for(int i = 0; i < 32; i++)
     {
         K[i+4] = K[i] ^ ExpT(K[i+1] ^ K[i+2] ^ K[i+3] ^ CK[i]);
-    }
-
-    for(int i = 0; i < 32; i++)
-    {
         RoundKey[i] = K[i+4];
     }
-    return 0;
 }
 
 // initiallize the sm4_ctx
@@ -95,8 +129,13 @@ void SM4_Init(SM4_Context* sm4_ctx, uint8_t* key, uint8_t* iv)
     memcpy(sm4_ctx->Iv, iv, SM4KeyLen);
 }
 
-void Cipher(SM4_Context* sm4_ctx, uint32_t* buf)
+void Cipher(SM4_Context* sm4_ctx, uint8_t* input)
 {
+    uint32_t buf[4];
+    for(int i = 0; i < 4; i++)
+    {
+        get_uint32_be(buf[i], input+4*i);
+    }
     uint32_t tmp_buf[36];
     for(int i = 0; i < 4; i++)
     {
@@ -106,15 +145,30 @@ void Cipher(SM4_Context* sm4_ctx, uint32_t* buf)
     {
         tmp_buf[i+4] = tmp_buf[i] ^ T( tmp_buf[i+1] ^ tmp_buf[i+2] ^ tmp_buf[i+3] ^ sm4_ctx->RoundKey[i]);
     }
+#ifdef DEBUG
+    for(int i = 0; i < 32; i++)
+    {
+        show_rk(tmp_buf+i+4, "X");
+    }
+#endif
     buf[0] = tmp_buf[35];
     buf[1] = tmp_buf[34];
     buf[2] = tmp_buf[33];
     buf[3] = tmp_buf[32];
+    for(int i = 0; i < 4; i++)
+    {
+        put_uint32_be(buf[i], input+4*i);
+    }
 }
 
-void InvCipher(SM4_Context* sm4_ctx, uint8_t* buf)
+void InvCipher(SM4_Context* sm4_ctx, uint8_t* input)
 {
-    uint8_t tmp_buf[36];
+    uint32_t buf[4];
+    for(int i = 0; i < 4; i++)
+    {
+        get_uint32_be(buf[i], input+4*i);
+    }
+    uint32_t tmp_buf[36];
     for(int i = 0; i < 4; i++)
     {
         tmp_buf[i] = buf[i];
@@ -127,9 +181,13 @@ void InvCipher(SM4_Context* sm4_ctx, uint8_t* buf)
     buf[1] = tmp_buf[34];
     buf[2] = tmp_buf[33];
     buf[3] = tmp_buf[32];
+    for(int i = 0; i < 4; i++)
+    {
+        put_uint32_be(buf[i], input+4*i);
+    }
 }
 
-static void XorWithIv(uint32_t * buf, uint32_t* Iv)
+static void XorWithIv(uint8_t * buf, uint8_t* Iv)
 {
     uint8_t i;
     for (i = 0; i < IvSize; i++)
@@ -141,7 +199,7 @@ static void XorWithIv(uint32_t * buf, uint32_t* Iv)
 // cbc encryption
 void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
 {
-    uint32_t* Iv = sm4_ctx-> Iv;
+    uint8_t* Iv = sm4_ctx-> Iv;
     for(int i = 0; i < length; i++)
     {
         XorWithIv(msg, Iv);
@@ -154,7 +212,7 @@ void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
 // cbc decryption
 void SM4_Decrypt_CBC(SM4_Context* sm4_ctx, uint8_t* cipher, int length)
 {
-    uint32_t* Iv = sm4_ctx-> Iv;
+    uint8_t* Iv = sm4_ctx-> Iv;
     for(int i = 0; i < length; i++)
     {
         InvCipher(sm4_ctx, cipher);
@@ -164,5 +222,111 @@ void SM4_Decrypt_CBC(SM4_Context* sm4_ctx, uint8_t* cipher, int length)
     }
 }
 
+void show(uint8_t* buf, char* name)
+{
+  printf("%3s: ", name);
+  for(int i=0; i<16; i++)
+  {
+    printf("%02x", buf[i]);
+  }
+  printf("\n");
+}
 
+void get_iv(uint8_t* iv)
+{
+  int i = 0, j = 0;
+  srand((unsigned)time(NULL));
+  for(i = 0; i < 4; ++i)
+  {
+    int tmp = rand();
+    for(j = 0; j < 4; ++j)
+    {
+      (iv)[i * 4 + j] = (tmp)&(0xff);
+      tmp >>= 8;
+    }
+  }
+}
+
+
+// int main()
+// {
+//     FILE *pfile = NULL;
+//     pfile = fopen("./input.txt", "rb");
+// 	uint8_t * data;
+//     uint8_t * original_data;
+//     int file_length = 0;
+//     if (pfile == NULL)
+// 	{
+// 		return 1;
+// 	}
+//     fseek(pfile, 0, SEEK_END);
+// 	file_length = ftell(pfile);
+//     if (file_length % 16 != 0 || file_length < 32) 
+//     {
+//         perror("输入必须大于32字节，且为16字节的倍数!\n");
+//     }
+// 	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+//     original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+// 	rewind(pfile);
+// 	file_length = fread(data, 1, file_length, pfile);
+// 	data[file_length] = '\0';
+// 	fclose(pfile);
+//     uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+//     struct SM4_context ctx;
+//     uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+//     get_iv(iv);
+//     show(key, "key");
+//     show(iv, "iv");
+//     memcpy((char*)original_data, (char*)data, file_length);
+//     struct timeval start, end;
+//     gettimeofday(&start, NULL);
+//     SM4_Init(&ctx, key, iv);
+//     SM4_Encrypt_CBC(&ctx, data, file_length/16);
+//     gettimeofday(&end, NULL);
+//     double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
+//     timeuse = timeuse / (double)1e6;
+//     printf("Encryption speed: %.2f Mps\n", (double)(16*8/1024.0)/timeuse);
+//     pfile = fopen("./output.txt", "wb");
+//     fwrite(data, 1, file_length, pfile);
+// 	fclose(pfile);
+//     SM4_Decrypt_CBC(&ctx, data, file_length/16);
+//     int flag = 0;
+//     for(int i = 0; i < file_length; i++)
+//     {
+//         if (data[i] != original_data[i])
+//         {
+//             flag = 1;
+//             break;
+//         }
+//     }
+//     if (flag)
+//     {
+//         // for(int i= 0; i < file_length; ++i)
+//         // {
+//         //     printf("%c", data[i]);
+//         // }
+//         printf("\ndecryption failed!\n");
+//     }
+//     else
+//     {
+//         printf("decryption succeeded!\n");
+//     }
+//     return 0;
+// }
+
+
+int main()
+{
+    uint8_t key[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+    // uint8_t key[] = { 0x67, 0x45, 0x23, 0x01, 0xef, 0xcd, 0xab, 0x89, 0x98, 0xba, 0xdc, 0xfe, 0x10, 0x32, 0x54, 0x76 };
+    uint8_t iv[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+    struct SM4_context ctx;
+    uint8_t in[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+    KeyExpansion(ctx.RoundKey, key);
+    for(int i = 0; i < 32; i++)
+    {
+        show_rk(&(ctx.RoundKey[i]), "rk");
+    }
+    Cipher(&ctx, in);
+}
 
