@@ -21,17 +21,17 @@ def validate(key, iv):
     ground_truth = do_validate()
     predict = open("output.txt", 'rb').read()
     if predict == ground_truth:
-        print("Encoding Success!")
+        print("Encryption Success!")
     else:
-        print("Encoding Failure!")
+        print("Encryption Failure!")
 
 import argparse
 
 parser = argparse.ArgumentParser(description='Process Operation')
 
 parser.add_argument("--mode", help="work mode", type=str)
-parser.add_argument("--key", help="work mode", type=str)
-parser.add_argument("--iv", help="work mode", type=str)
+parser.add_argument("--key", help="aes key", type=str)
+parser.add_argument("--iv", help="cbc mode iv", type=str)
 
 args = parser.parse_args()
 

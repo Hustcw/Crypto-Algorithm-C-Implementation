@@ -423,9 +423,9 @@ int main()
 	}
   fseek(pfile, 0, SEEK_END);
 	file_length = ftell(pfile);
-  if (file_length % 16 != 0 || file_length < 32) 
+  if (file_length % 16 != 0 || file_length < 16) 
   {
-    perror("输入必须大于32字节，且为16字节的倍数!\n");
+    perror("输入必须大于16字节，且为16字节的倍数!\n");
   }
 	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
   original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
