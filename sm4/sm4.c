@@ -78,7 +78,7 @@ void KeyExpansion(uint32_t* RoundKey, uint32_t* key)
 
     for(int i = 0; i < 32; i++)
     {
-        RoundKey[i+4] = RoundKey[i] ^ ExpT(RoundKey[i+1] ^ RoundKey[i+2] ^ RoundKey[i+3] ^ CK[i]);
+        K[i+4] = K[i] ^ ExpT(K[i+1] ^ K[i+2] ^ K[i+3] ^ CK[i]);
     }
 
     for(int i = 0; i < 32; i++)
@@ -97,14 +97,72 @@ void SM4_Init(SM4_Context* sm4_ctx, uint8_t* key, uint8_t* iv)
 
 void Cipher(SM4_Context* sm4_ctx, uint32_t* buf)
 {
-    
+    uint32_t tmp_buf[36];
+    for(int i = 0; i < 4; i++)
+    {
+        tmp_buf[i] = buf[i];
+    }
+    for(int i = 0; i< 32; i++)
+    {
+        tmp_buf[i+4] = tmp_buf[i] ^ T( tmp_buf[i+1] ^ tmp_buf[i+2] ^ tmp_buf[i+3] ^ sm4_ctx->RoundKey[i]);
+    }
+    buf[0] = tmp_buf[35];
+    buf[1] = tmp_buf[34];
+    buf[2] = tmp_buf[33];
+    buf[3] = tmp_buf[32];
+}
+
+void InvCipher(SM4_Context* sm4_ctx, uint8_t* buf)
+{
+    uint8_t tmp_buf[36];
+    for(int i = 0; i < 4; i++)
+    {
+        tmp_buf[i] = buf[i];
+    }
+    for(int i = 0; i< 32; i++)
+    {
+        tmp_buf[i+4] = tmp_buf[i] ^ T( tmp_buf[i+1] ^ tmp_buf[i+2] ^ tmp_buf[i+3] ^ sm4_ctx->RoundKey[35-i]);
+    }
+    buf[0] = tmp_buf[35];
+    buf[1] = tmp_buf[34];
+    buf[2] = tmp_buf[33];
+    buf[3] = tmp_buf[32];
+}
+
+static void XorWithIv(uint32_t * buf, uint32_t* Iv)
+{
+    uint8_t i;
+    for (i = 0; i < IvSize; i++)
+    {
+        buf[i] ^= Iv[i];
+    }
 }
 
 // cbc encryption
-void SM4_Encrypt(SM4_Context* sm4_ctx, uint8_t* msg, int length);
+void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
+{
+    uint32_t* Iv = sm4_ctx-> Iv;
+    for(int i = 0; i < length; i++)
+    {
+        XorWithIv(msg, Iv);
+        Cipher(sm4_ctx, msg);
+        Iv = msg;
+        msg += SM4_BlockLen;
+    }
+}
 
 // cbc decryption
-void SM4_Decrypt(SM4_Context* sm4_ctx, uint8_t* cipher, int length);
+void SM4_Decrypt_CBC(SM4_Context* sm4_ctx, uint8_t* cipher, int length)
+{
+    uint32_t* Iv = sm4_ctx-> Iv;
+    for(int i = 0; i < length; i++)
+    {
+        InvCipher(sm4_ctx, cipher);
+        XorWithIv(cipher, Iv);
+        Iv = cipher;
+        cipher += SM4_BlockLen;
+    }
+}
 
 
 
