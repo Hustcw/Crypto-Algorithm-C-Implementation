@@ -196,11 +196,16 @@ static void XorWithIv(uint8_t * buf, uint8_t* Iv)
     }
 }
 
-// void padding(uint8_t *buf, int length)
-// {
-//     int pad_len = 16 - (length % 16);
-//     uint8_t pad[pad_len] =  
-// }
+void padding(uint8_t *buf, int length)
+{
+    int pad_len = 16 - (length % 16);
+    uint8_t *pad = malloc(16);
+    for(int i = 0; i < pad_len; i++)
+    {
+        pad[i] = pad_len;
+    }
+    memcpy(buf+length, pad, pad_len);
+}
 
 // cbc encryption
 void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
@@ -262,7 +267,7 @@ int main()
     pfile = fopen("./input.txt", "rb");
 	uint8_t * data;
     uint8_t * original_data;
-    int file_length = 0;
+    int file_length = 0, total_length = 0;
     if (pfile == NULL)
 	{
 		return 1;
@@ -273,11 +278,12 @@ int main()
     {
         perror("输入必须大于316字节，且为16字节的倍数!\n");
     }
-	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
-    original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+    total_length = (file_length + (16 - (file_length % 16)));
+	data = (uint8_t *)malloc((total_length+1) * sizeof(char));
+    original_data = (uint8_t *)malloc((total_length+1) * sizeof(char));
 	rewind(pfile);
 	file_length = fread(data, 1, file_length, pfile);
-	data[file_length] = '\0';
+	padding(data, file_length);
 	fclose(pfile);
     uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
     struct SM4_context ctx;
@@ -285,21 +291,21 @@ int main()
     get_iv(iv);
     show(key, "key");
     show(iv, "iv");
-    memcpy((char*)original_data, (char*)data, file_length);
+    memcpy((char*)original_data, (char*)data, total_length);
     struct timeval start, end;
     gettimeofday(&start, NULL);
     SM4_Init(&ctx, key, iv);
-    SM4_Encrypt_CBC(&ctx, data, file_length);
+    SM4_Encrypt_CBC(&ctx, data, total_length);
     gettimeofday(&end, NULL);
     double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
     timeuse = timeuse / (double)1e6;
     printf("Encryption speed: %.2f Mps\n", (double)(16*8/1024.0)/timeuse);
     pfile = fopen("./output.txt", "wb");
-    fwrite(data, 1, file_length, pfile);
+    fwrite(data, 1, total_length, pfile);
 	fclose(pfile);
-    SM4_Decrypt_CBC(&ctx, data, file_length);
+    SM4_Decrypt_CBC(&ctx, data, total_length);
     int flag = 0;
-    for(int i = 0; i < file_length; i++)
+    for(int i = 0; i < total_length; i++)
     {
         if (data[i] != original_data[i])
         {
