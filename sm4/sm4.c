@@ -276,7 +276,7 @@ int main()
 	file_length = ftell(pfile);
     if (file_length % 16 != 0 || file_length < 16) 
     {
-        perror("输入必须大于316字节，且为16字节的倍数!\n");
+        perror("输入必须大于16字节，且为16字节的倍数!\n");
     }
     total_length = (file_length + (16 - (file_length % 16)));
 	data = (uint8_t *)malloc((total_length+1) * sizeof(char));

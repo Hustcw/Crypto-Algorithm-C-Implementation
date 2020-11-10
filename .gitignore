@@ -53,3 +53,6 @@ Mkfile.old
 dkms.conf
 .DS_Store
 .ipynb_checkpoints/
+input.txt
+output.txt
+.vscode/
