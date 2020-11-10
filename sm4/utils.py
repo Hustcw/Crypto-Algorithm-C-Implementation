@@ -1,3 +1,5 @@
+from gmssl.sm4 import CryptSM4, SM4_ENCRYPT, SM4_DECRYPT
+
 def getSbox():
     def do_getSbox():
         sbox = [
@@ -28,14 +30,32 @@ def generate():
     fp = open('input.txt', 'w')
     message = 'this_is_a_test!!'
     assert len(message) == 16
-    NUM = 1024
+    NUM = 1
     fp.write(message*NUM)
     fp.close()
+
+def validate(key, iv):
+    key = bytes.fromhex(key)
+    iv = bytes.fromhex(iv)
+    def do_validate():
+        msg = open("input.txt", 'rb').read()
+        crypt_sm4 = CryptSM4()
+        crypt_sm4.set_key(key, SM4_ENCRYPT)
+        cipher = crypt_sm4.crypt_cbc(iv, msg) #  bytes类型
+        return cipher
+    ground_truth = open("output.txt", 'rb').read()
+    if do_validate() == ground_truth:
+        print("Encryption Success!")
+    else:
+        print(do_validate().hex())
+        print(ground_truth.hex())
+        print("Encryption Failure!")
+
 
 import argparse
 parser = argparse.ArgumentParser(description='Process Operation')
 parser.add_argument("--mode", help="work mode", type=str)
-parser.add_argument("--key", help="aes key", type=str)
+parser.add_argument("--key", help="sm4 key", type=str)
 parser.add_argument("--iv", help="cbc mode iv", type=str)
 
 args = parser.parse_args()

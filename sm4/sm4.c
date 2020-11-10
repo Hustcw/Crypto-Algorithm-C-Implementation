@@ -148,7 +148,7 @@ void Cipher(SM4_Context* sm4_ctx, uint8_t* input)
 #ifdef DEBUG
     for(int i = 0; i < 32; i++)
     {
-        show_rk(tmp_buf+i+4, "X");
+        show_rk((uint8_t *)(tmp_buf+i+4), "X");
     }
 #endif
     buf[0] = tmp_buf[35];
@@ -175,7 +175,7 @@ void InvCipher(SM4_Context* sm4_ctx, uint8_t* input)
     }
     for(int i = 0; i< 32; i++)
     {
-        tmp_buf[i+4] = tmp_buf[i] ^ T( tmp_buf[i+1] ^ tmp_buf[i+2] ^ tmp_buf[i+3] ^ sm4_ctx->RoundKey[35-i]);
+        tmp_buf[i+4] = tmp_buf[i] ^ T( tmp_buf[i+1] ^ tmp_buf[i+2] ^ tmp_buf[i+3] ^ sm4_ctx->RoundKey[31-i]);
     }
     buf[0] = tmp_buf[35];
     buf[1] = tmp_buf[34];
@@ -196,11 +196,17 @@ static void XorWithIv(uint8_t * buf, uint8_t* Iv)
     }
 }
 
+// void padding(uint8_t *buf, int length)
+// {
+//     int pad_len = 16 - (length % 16);
+//     uint8_t pad[pad_len] =  
+// }
+
 // cbc encryption
 void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
 {
     uint8_t* Iv = sm4_ctx-> Iv;
-    for(int i = 0; i < length; i++)
+    for(int i = 0; i < length; i+= SM4_BlockLen)
     {
         XorWithIv(msg, Iv);
         Cipher(sm4_ctx, msg);
@@ -212,12 +218,14 @@ void SM4_Encrypt_CBC(SM4_Context* sm4_ctx, uint8_t* msg, int length)
 // cbc decryption
 void SM4_Decrypt_CBC(SM4_Context* sm4_ctx, uint8_t* cipher, int length)
 {
-    uint8_t* Iv = sm4_ctx-> Iv;
-    for(int i = 0; i < length; i++)
+    uint8_t* Iv = sm4_ctx->Iv;
+    uint8_t storeNextIv[SM4_BlockLen];
+    for(int i = 0; i < length; i+=SM4_BlockLen)
     {
+        memcpy(storeNextIv, cipher, SM4_BlockLen);
         InvCipher(sm4_ctx, cipher);
         XorWithIv(cipher, Iv);
-        Iv = cipher;
+        memcpy(Iv, storeNextIv, SM4_BlockLen);
         cipher += SM4_BlockLen;
     }
 }
@@ -248,85 +256,88 @@ void get_iv(uint8_t* iv)
 }
 
 
-// int main()
-// {
-//     FILE *pfile = NULL;
-//     pfile = fopen("./input.txt", "rb");
-// 	uint8_t * data;
-//     uint8_t * original_data;
-//     int file_length = 0;
-//     if (pfile == NULL)
-// 	{
-// 		return 1;
-// 	}
-//     fseek(pfile, 0, SEEK_END);
-// 	file_length = ftell(pfile);
-//     if (file_length % 16 != 0 || file_length < 32) 
-//     {
-//         perror("输入必须大于32字节，且为16字节的倍数!\n");
-//     }
-// 	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
-//     original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
-// 	rewind(pfile);
-// 	file_length = fread(data, 1, file_length, pfile);
-// 	data[file_length] = '\0';
-// 	fclose(pfile);
-//     uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-//     struct SM4_context ctx;
-//     uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
-//     get_iv(iv);
-//     show(key, "key");
-//     show(iv, "iv");
-//     memcpy((char*)original_data, (char*)data, file_length);
-//     struct timeval start, end;
-//     gettimeofday(&start, NULL);
-//     SM4_Init(&ctx, key, iv);
-//     SM4_Encrypt_CBC(&ctx, data, file_length/16);
-//     gettimeofday(&end, NULL);
-//     double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
-//     timeuse = timeuse / (double)1e6;
-//     printf("Encryption speed: %.2f Mps\n", (double)(16*8/1024.0)/timeuse);
-//     pfile = fopen("./output.txt", "wb");
-//     fwrite(data, 1, file_length, pfile);
-// 	fclose(pfile);
-//     SM4_Decrypt_CBC(&ctx, data, file_length/16);
-//     int flag = 0;
-//     for(int i = 0; i < file_length; i++)
-//     {
-//         if (data[i] != original_data[i])
-//         {
-//             flag = 1;
-//             break;
-//         }
-//     }
-//     if (flag)
-//     {
-//         // for(int i= 0; i < file_length; ++i)
-//         // {
-//         //     printf("%c", data[i]);
-//         // }
-//         printf("\ndecryption failed!\n");
-//     }
-//     else
-//     {
-//         printf("decryption succeeded!\n");
-//     }
-//     return 0;
-// }
-
-
 int main()
 {
-    uint8_t key[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
-    // uint8_t key[] = { 0x67, 0x45, 0x23, 0x01, 0xef, 0xcd, 0xab, 0x89, 0x98, 0xba, 0xdc, 0xfe, 0x10, 0x32, 0x54, 0x76 };
-    uint8_t iv[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
-    struct SM4_context ctx;
-    uint8_t in[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
-    KeyExpansion(ctx.RoundKey, key);
-    for(int i = 0; i < 32; i++)
+    FILE *pfile = NULL;
+    pfile = fopen("./input.txt", "rb");
+	uint8_t * data;
+    uint8_t * original_data;
+    int file_length = 0;
+    if (pfile == NULL)
+	{
+		return 1;
+	}
+    fseek(pfile, 0, SEEK_END);
+	file_length = ftell(pfile);
+    if (file_length % 16 != 0 || file_length < 16) 
     {
-        show_rk(&(ctx.RoundKey[i]), "rk");
+        perror("输入必须大于316字节，且为16字节的倍数!\n");
     }
-    Cipher(&ctx, in);
+	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+    original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+	rewind(pfile);
+	file_length = fread(data, 1, file_length, pfile);
+	data[file_length] = '\0';
+	fclose(pfile);
+    uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+    struct SM4_context ctx;
+    uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+    get_iv(iv);
+    show(key, "key");
+    show(iv, "iv");
+    memcpy((char*)original_data, (char*)data, file_length);
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    SM4_Init(&ctx, key, iv);
+    SM4_Encrypt_CBC(&ctx, data, file_length);
+    gettimeofday(&end, NULL);
+    double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
+    timeuse = timeuse / (double)1e6;
+    printf("Encryption speed: %.2f Mps\n", (double)(16*8/1024.0)/timeuse);
+    pfile = fopen("./output.txt", "wb");
+    fwrite(data, 1, file_length, pfile);
+	fclose(pfile);
+    SM4_Decrypt_CBC(&ctx, data, file_length);
+    int flag = 0;
+    for(int i = 0; i < file_length; i++)
+    {
+        if (data[i] != original_data[i])
+        {
+            flag = 1;
+            break;
+        }
+    }
+    if (flag)
+    {
+        // for(int i= 0; i < file_length; ++i)
+        // {
+        //     printf("%c", data[i]);
+        // }
+        printf("\ndecryption failed!\n");
+    }
+    else
+    {
+        printf("decryption succeeded!\n");
+    }
+    return 0;
 }
+
+
+// int main()
+// {
+//     uint8_t key[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+//     // uint8_t key[] = { 0x67, 0x45, 0x23, 0x01, 0xef, 0xcd, 0xab, 0x89, 0x98, 0xba, 0xdc, 0xfe, 0x10, 0x32, 0x54, 0x76 };
+//     // uint8_t iv[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+//     struct SM4_context ctx;
+//     uint8_t in[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10 };
+//     KeyExpansion(ctx.RoundKey, key);
+//     for(int i = 0; i < 32; i++)
+//     {
+//         show_rk((uint8_t *)&(ctx.RoundKey[i]), "rk");
+//     }
+//     for(int i = 0; i < 1e6; i++)
+//         Cipher(&ctx, in);
+//     // InvCipher(&ctx, in);
+//     show(in, "encryption");
+// }
 
