@@ -366,108 +366,108 @@ void AES_CBC_encrypt(struct AES_ctx *ctx, uint8_t* msg, uint32_t length)
 
 void AES_CBC_decrypt(struct AES_ctx* ctx, uint8_t* cipher,  uint32_t length)
 {
-  uintptr_t i;
-  uint8_t storeNextIv[AES_BLOCKLEN];
-  for (i = 0; i < length; i += AES_BLOCKLEN)
-  {
-    memcpy(storeNextIv, cipher, AES_BLOCKLEN);
-    InvCipher((state_t*)cipher, ctx->RoundKey);
-    XorWithIv(cipher, ctx->Iv);
-    memcpy(ctx->Iv, storeNextIv, AES_BLOCKLEN);
-    cipher += AES_BLOCKLEN;
-  }
+    uintptr_t i;
+    uint8_t storeNextIv[AES_BLOCKLEN];
+    for (i = 0; i < length; i += AES_BLOCKLEN)
+    {
+      memcpy(storeNextIv, cipher, AES_BLOCKLEN);
+      InvCipher((state_t*)cipher, ctx->RoundKey);
+      XorWithIv(cipher, ctx->Iv);
+      memcpy(ctx->Iv, storeNextIv, AES_BLOCKLEN);
+      cipher += AES_BLOCKLEN;
+    }
 }
 
 void get_iv(uint8_t* iv)
 {
-  int i = 0, j = 0;
-  srand((unsigned)time(NULL));
-  for(i = 0; i < 4; ++i)
-  {
-    int tmp = rand();
-    for(j = 0; j < 4; ++j)
+    int i = 0, j = 0;
+    srand((unsigned)time(NULL));
+    for(i = 0; i < 4; ++i)
     {
-      (iv)[i * 4 + j] = (tmp)&(0xff);
-      tmp >>= 8;
+      int tmp = rand();
+      for(j = 0; j < 4; ++j)
+      {
+        (iv)[i * 4 + j] = (tmp)&(0xff);
+        tmp >>= 8;
+      }
     }
-  }
 }
 
 void show(uint8_t* buf, char* name)
 {
-  printf("%3s: ", name);
-  for(int i=0; i<16; i++)
-  {
-    printf("%02x", buf[i]);
-  }
-  printf("\n");
+    printf("%3s: ", name);
+    for(int i=0; i<16; i++)
+    {
+      printf("%02x", buf[i]);
+    }
+    printf("\n");
 }
 
 int main()
 {
-  for(int i = 0; i < 256; ++i)
-  {
-    for(int j = 0; j < 256; ++j)
+    for(int i = 0; i < 256; ++i)
     {
-      Mtable[i][j] = Multiply(i,j);
+      for(int j = 0; j < 256; ++j)
+      {
+        Mtable[i][j] = Multiply(i,j);
+      }
     }
-  }
-  FILE *pfile = NULL;
-  pfile = fopen("./input.txt", "rb");
-	uint8_t * data;
-  uint8_t * original_data;
-  int file_length = 0;
-  if (pfile == NULL)
-	{
-		return 1;
-	}
-  fseek(pfile, 0, SEEK_END);
-	file_length = ftell(pfile);
-  if (file_length % 16 != 0 || file_length < 16) 
-  {
-    perror("输入必须大于16字节，且为16字节的倍数!\n");
-  }
-	data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
-  original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
-	rewind(pfile);
-	file_length = fread(data, 1, file_length, pfile);
-	data[file_length] = '\0';
-	fclose(pfile);
-  uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-  struct AES_ctx ctx;
-  uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
-  get_iv(iv);
-  show(key, "key");
-  show(iv, "iv");
-  memcpy((char*)original_data, (char*)data, file_length);
-  struct timeval start, end;
-  gettimeofday(&start, NULL );
-  AES_init_ctx_iv(&ctx, key, iv);
-  AES_CBC_encrypt(&ctx, data, file_length);
-  gettimeofday(&end, NULL);
-  double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
-  timeuse = timeuse / (double)1e6;
-  printf("Encryption speed: %.2f Mbps\n", (double)(16*8/1024.0)/timeuse);
-  pfile = fopen("./output.txt", "wb");
-  fwrite(data, 1, file_length, pfile);
-	fclose(pfile);
-  AES_CBC_decrypt(&ctx, data, file_length);
-  int flag = 0;
-  for(int i = 0; i < file_length; i++)
-  {
-    if (data[i] != original_data[i])
+    FILE *pfile = NULL;
+    pfile = fopen("./input.txt", "rb");
+    uint8_t * data;
+    uint8_t * original_data;
+    int file_length = 0;
+    if (pfile == NULL)
     {
-      flag = 1;
-      break;
+      return 1;
     }
-  }
-  if (flag)
-  {
-    printf("decryption failed!\n");
-  }
-  else
-  {
-    printf("decryption succeeded!\n");
-  }
-  return 0;
+    fseek(pfile, 0, SEEK_END);
+    file_length = ftell(pfile);
+    if (file_length % 16 != 0 || file_length < 16) 
+    {
+      perror("输入必须大于16字节，且为16字节的倍数!\n");
+    }
+    data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+    original_data = (uint8_t *)malloc((file_length + 1) * sizeof(char));
+    rewind(pfile);
+    file_length = fread(data, 1, file_length, pfile);
+    data[file_length] = '\0';
+    fclose(pfile);
+    uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+    struct AES_ctx ctx;
+    uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+    get_iv(iv);
+    show(key, "key");
+    show(iv, "iv");
+    memcpy((char*)original_data, (char*)data, file_length);
+    struct timeval start, end;
+    gettimeofday(&start, NULL );
+    AES_init_ctx_iv(&ctx, key, iv);
+    AES_CBC_encrypt(&ctx, data, file_length);
+    gettimeofday(&end, NULL);
+    double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
+    timeuse = timeuse / (double)1e6;
+    printf("Encryption speed: %.2f Mbps\n", (double)(16*8/1024.0/timeuse));
+    pfile = fopen("./output.txt", "wb");
+    fwrite(data, 1, file_length, pfile);
+    fclose(pfile);
+    AES_CBC_decrypt(&ctx, data, file_length);
+    int flag = 0;
+    for(int i = 0; i < file_length; i++)
+    {
+      if (data[i] != original_data[i])
+      {
+        flag = 1;
+        break;
+      }
+    }
+    if (flag)
+    {
+      printf("decryption failed!\n");
+    }
+    else
+    {
+      printf("decryption succeeded!\n");
+    }
+    return 0;
 }

@@ -30,7 +30,7 @@ def generate():
     fp = open('input.txt', 'w')
     message = 'this_is_a_test!!'
     assert len(message) == 16
-    NUM = 1024  
+    NUM = 1024
     fp.write(message*NUM)
     fp.close()
 
