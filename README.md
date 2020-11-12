@@ -70,7 +70,7 @@ SM3 Hash Success!
 ```
 ## SHA-3
 reference: 
-- https://github.com/brainhub/SHA3IUF/blob/master/sha3.c
 - https://github.com/mjosaarinen/tiny_sha3
+- https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 - https://nicodechal.github.io/2019/04/08/hash-funciton-sha3/
 - https://en.wikipedia.org/wiki/SHA-3
