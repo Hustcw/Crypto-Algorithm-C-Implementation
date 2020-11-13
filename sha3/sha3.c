@@ -8,6 +8,8 @@
 // define SHA3 function below
 #define Nr 24
 #define DEBUG
+#define TIME
+
 void show_rr(uint8_t* buf, int len)
 {
   for(int i=0; i<len; i++)
@@ -19,8 +21,7 @@ void show_rr(uint8_t* buf, int len)
 void keccakf(uint64_t st[25])
 {
     //temp variables
-    int i,j,r;
-    uint64_t t, bc[5];
+    uint64_t t1, t2, bc[5];
     
     const int keccakf_piln[24] = {
         10, 7,  11, 17, 18, 3, 5,  16, 8,  21, 24, 4,
@@ -42,37 +43,37 @@ void keccakf(uint64_t st[25])
         0x8000000000008080, 0x0000000080000001, 0x8000000080008008
     };
     // round function implementation
-    for(int r=0; r < Nr; r++)
+    for(int r = 0; r < Nr; r++)
     {
         // theta implementation
-        for(i=0; i<5; i++)
+        for(int i=0; i<5; i++)
         {
             bc[i] = st[i] ^ st[i+5] ^ st[i+10] ^ st[i+15] ^ st[i+20];
         }
 
         for(int i=0; i < 5; i++)
         {
-            t = bc[(i+4) % 5] ^ ROTL64(bc[(i+1) % 5], 1);
+            t1 = bc[(i+4) % 5] ^ ROTL64(bc[(i+1) % 5], 1);
             for(int j = 0; j < 25; j+=5)
             {
-                st[j+i] ^= t;
+                st[j+i] ^= t1;
             }
         }
 
         // Rho Pi
-        t = st[1];
-        for (i = 0; i < 24; i++) {
-            j = keccakf_piln[i];
-            bc[0] = st[j];
-            st[j] = ROTL64(t, keccakf_rotc[i]);
-            t = bc[0];
+        t1 = st[1];
+        for (int i = 0; i < 24; i++) {
+            t2 = keccakf_piln[i];
+            bc[0] = st[t2];
+            st[t2] = ROTL64(t1, keccakf_rotc[i]);
+            t1 = bc[0];
         }
 
         //  Chi
-        for (j = 0; j < 25; j += 5) {
-            for (i = 0; i < 5; i++)
+        for (int j = 0; j < 25; j += 5) {
+            for (int i = 0; i < 5; i++)
                 bc[i] = st[j + i];
-            for (i = 0; i < 5; i++)
+            for (int i = 0; i < 5; i++)
                 st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
         }
 
@@ -80,6 +81,7 @@ void keccakf(uint64_t st[25])
         st[0] ^= keccakf_rndc[r];
     }
 }
+
 
 void sha3_init(SHA3_Context* ctx, int hashlen)
 {
@@ -151,7 +153,17 @@ void sha3_file(char* filename, uint8_t* hash)
     data = (uint8_t *)malloc((file_length+1) * sizeof(char));
     rewind(pfile);
 	file_length = fread(data, 1, file_length, pfile);
+    #ifdef TIME
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    #endif
     sha3_data(data, file_length, hash, 32);
+    #ifdef TIME
+        gettimeofday(&end, NULL);
+        double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
+        timeuse = timeuse / (double)1e6;
+        printf("Hash speed: %.2f Mbps\n", (double)(16*8/1024.0)/timeuse);
+    #endif
 }
 
 int main()
