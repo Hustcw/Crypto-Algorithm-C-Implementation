@@ -74,3 +74,21 @@ reference:
 - https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 - https://nicodechal.github.io/2019/04/08/hash-funciton-sha3/
 - https://en.wikipedia.org/wiki/SHA-3
+
+- Usage:
+```bash
+python3 utils.py --mode generate
+clang sha3.c -O3 -o sha3 && ./sha3
+python3 utils.py --mode validate
+```
+
+- Output
+```bash
+(crypto) ➜  sha3 git:(main) ✗ python3 utils.py --mode generate    
+(crypto) ➜  sha3 git:(main) ✗ clang sha3.c -O3 -o sha3 && ./sha3
+Hash speed: 679.35 Mbps
+SHA3: 482949ce894b60830436a8cac901dfb1c86d4a9edf4515c720924f6776e3aef1%                                                                                         
+(crypto) ➜  sha3 git:(main) ✗ python3 utils.py --mode validate
+SHA3 Hash Success!
+(crypto) ➜  sha3 git:(main) ✗ 
+```

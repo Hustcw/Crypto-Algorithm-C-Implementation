@@ -299,7 +299,7 @@ int main()
     gettimeofday(&end, NULL);
     double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
     timeuse = timeuse / (double)1e6;
-    printf("Encryption speed: %.2f Mbps\n", (double)(16*8/1024.0)/timeuse);
+    printf("Encryption speed: %.2f Mbps\n", (double)(16*8)/timeuse);
     pfile = fopen("./output.txt", "wb");
     fwrite(data, 1, total_length, pfile);
 	fclose(pfile);

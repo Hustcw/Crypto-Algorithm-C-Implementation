@@ -94,10 +94,6 @@ static void KeyExpansion(uint8_t* RoundKey, const uint8_t* Key)
         tempa[3] = u8tmp;
       }
 
-      // SubWord() is a function that takes a four-byte input word and 
-      // applies the S-box to each of the four bytes to produce an output word.
-
-      // Function Subword()
       {
         tempa[0] = getSBoxValue(tempa[0]);
         tempa[1] = getSBoxValue(tempa[1]);
@@ -189,21 +185,6 @@ static uint8_t xtime(uint8_t x)
   return ((x<<1) ^ (((x>>7) & 1) * 0x1b));
 }
 
-// static void MixColumns(state_t* state)
-// {
-//   uint8_t i;
-//   uint8_t Tmp, Tm, t;
-//   for (i = 0; i < 4; ++i)
-//   {  
-//     t   = (*state)[i][0];
-//     Tmp = (*state)[i][0] ^ (*state)[i][1] ^ (*state)[i][2] ^ (*state)[i][3] ;
-//     Tm  = (*state)[i][0] ^ (*state)[i][1] ; Tm = xtime(Tm);  (*state)[i][0] ^= Tm ^ Tmp ;
-//     Tm  = (*state)[i][1] ^ (*state)[i][2] ; Tm = xtime(Tm);  (*state)[i][1] ^= Tm ^ Tmp ;
-//     Tm  = (*state)[i][2] ^ (*state)[i][3] ; Tm = xtime(Tm);  (*state)[i][2] ^= Tm ^ Tmp ;
-//     Tm  = (*state)[i][3] ^ t ;              Tm = xtime(Tm);  (*state)[i][3] ^= Tm ^ Tmp ;
-//   }
-// }
-
 static void MixColumns(state_t* state)
 {
   uint8_t i;
@@ -221,13 +202,15 @@ static void MixColumns(state_t* state)
   }
 }
 
-#define Multiply(x, y)                                \
-      (  ((y & 1) * x) ^                              \
-      ((y>>1 & 1) * xtime(x)) ^                       \
-      ((y>>2 & 1) * xtime(xtime(x))) ^                \
-      ((y>>3 & 1) * xtime(xtime(xtime(x)))) ^         \
-      ((y>>4 & 1) * xtime(xtime(xtime(xtime(x))))))   \
-
+uint32_t mul(uint32_t x, uint32_t y) {
+  return ( 
+    ((y&1) * x) ^ 
+    (((y>>1) & 1) * xtime(x)) ^ 
+    (((y>>2) & 1) * xtime(xtime(x))) ^ 
+    (((y>>3) & 1) * xtime(xtime(xtime(x)))) ^ 
+    (((y>>4) & 1) * xtime(xtime(xtime(xtime(x)))))
+    );
+}
 
 static void InvMixColumns(state_t* state)
 {
@@ -291,28 +274,26 @@ static void InvShiftRows(state_t* state)
 static void Cipher(state_t* state, const uint8_t* RoundKey)
 {
   uint8_t round = 0;
-  // Add the First round key to the state before starting the rounds.
-  AddRoundKey(0, state, RoundKey);
-  for (round = 1; ; ++round)
+  AddRoundKey(0, state, RoundKey); 
+  round = 1;
+  while(1)
   {
-    SubBytes(state);
-    ShiftRows(state);
-    if (round == Nr)
+    SubBytes(state); // sbox
+    ShiftRows(state); 
+    if (round == Nr) // the last round
     {
       break;
     }
-    MixColumns(state);
-    AddRoundKey(round, state, RoundKey);
+    MixColumns(state); 
+    AddRoundKey(round, state, RoundKey); 
+    round ++;
   }
-  // Add round key to last round
   AddRoundKey(Nr, state, RoundKey);
 }
 
 static void InvCipher(state_t* state, const uint8_t* RoundKey)
 {
   uint8_t round = 0;
-
-  // Add the First round key to the state before starting the rounds.
   AddRoundKey(Nr, state, RoundKey);
   for (round = (Nr - 1); ; --round)
   {
@@ -326,19 +307,6 @@ static void InvCipher(state_t* state, const uint8_t* RoundKey)
     InvMixColumns(state);
   }
 }
-
-void AES_ECB_encrypt(const struct AES_ctx* ctx, uint8_t* msg)
-{
-  // The next function call encrypts the PlainText with the Key using AES algorithm.
-  Cipher((state_t*)msg, ctx->RoundKey);
-}
-
-void AES_ECB_decrypt(const struct AES_ctx* ctx, uint8_t* cipher)
-{
-  // The next function call decrypts the PlainText with the Key using AES algorithm.
-  InvCipher((state_t*)cipher, ctx->RoundKey);
-}
-
 
 static void XorWithIv(uint8_t* buf, const uint8_t* Iv)
 {
@@ -360,20 +328,18 @@ void AES_CBC_encrypt(struct AES_ctx *ctx, uint8_t* msg, uint32_t length)
     Iv = msg;
     msg += AES_BLOCKLEN;
   }
-  /* store Iv in ctx for next call */
-  // memcpy(ctx->Iv, Iv, AES_BLOCKLEN);
 }
 
 void AES_CBC_decrypt(struct AES_ctx* ctx, uint8_t* cipher,  uint32_t length)
 {
     uintptr_t i;
-    uint8_t storeNextIv[AES_BLOCKLEN];
+    uint8_t TempIv[AES_BLOCKLEN];
     for (i = 0; i < length; i += AES_BLOCKLEN)
     {
-      memcpy(storeNextIv, cipher, AES_BLOCKLEN);
+      memcpy(TempIv, cipher, AES_BLOCKLEN);
       InvCipher((state_t*)cipher, ctx->RoundKey);
       XorWithIv(cipher, ctx->Iv);
-      memcpy(ctx->Iv, storeNextIv, AES_BLOCKLEN);
+      memcpy(ctx->Iv, TempIv, AES_BLOCKLEN);
       cipher += AES_BLOCKLEN;
     }
 }
@@ -409,7 +375,7 @@ int main()
     {
       for(int j = 0; j < 256; ++j)
       {
-        Mtable[i][j] = Multiply(i,j);
+        Mtable[i][j] = mul(i,j);
       }
     }
     FILE *pfile = NULL;
@@ -433,9 +399,9 @@ int main()
     file_length = fread(data, 1, file_length, pfile);
     data[file_length] = '\0';
     fclose(pfile);
-    uint8_t key[] = { 0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
+    uint8_t key[] = { 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23, 0x23 };
     struct AES_ctx ctx;
-    uint8_t iv[]  = { 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f };
+    uint8_t iv[16];
     get_iv(iv);
     show(key, "key");
     show(iv, "iv");
@@ -447,7 +413,7 @@ int main()
     gettimeofday(&end, NULL);
     double timeuse = (end.tv_sec-start.tv_sec)*1000000+(end.tv_usec-start.tv_usec); 
     timeuse = timeuse / (double)1e6;
-    printf("Encryption speed: %.2f Mbps\n", (double)(16*8/1024.0/timeuse));
+    printf("Encryption speed: %.2f Mbps\n", (double)(16*8/timeuse));
     pfile = fopen("./output.txt", "wb");
     fwrite(data, 1, file_length, pfile);
     fclose(pfile);
